@@ -22,12 +22,11 @@ import javax.crypto.Mac;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.omg.CORBA.portable.InputStream;
 
 public class PasswordManager {
 	static {
@@ -55,10 +54,11 @@ public class PasswordManager {
 	private HashMap<String, byte[]> map;
 	private byte[] secretMasterKeyData;
 	private SecretKey secretMasterKey;
-	private GCMParameterSpec s;
+	private byte[] intialVector;
 
 	public PasswordManager() {
 		try {
+			intialVector = new byte[16];
 			// first check if A master is stored before.
 			encryptedMaster = getSavedEncryptedMaster();
 			// ini
@@ -79,20 +79,23 @@ public class PasswordManager {
 			generateRandom();
 			encryptedMaster = encryptMasterPass(newMasterPass);
 			// save encrypted pass.
-			savedEncryptedMasterPass();
-			secretMasterKeyData = newMasterPass.getBytes();
-			System.out.println(newMasterPass);
+			secretMasterKeyData = genratePaddedPass(newMasterPass).getBytes();
 			secretMasterKey = new SecretKeySpec(secretMasterKeyData, "AES");
-			s = new GCMParameterSpec(128, secretMasterKeyData);
+			SecureRandom sr = new SecureRandom();
+			sr.nextBytes(intialVector);
+			System.out.println(new String(intialVector));
+			savedEncryptedMasterPass();
 			return true;
 		} else {
 			// check if Entered Master is the same as used before.
 			boolean match = authenticate(newMasterPass);
 			if (match) {
-				secretMasterKeyData = newMasterPass.getBytes();
-				System.out.println(newMasterPass);
+				secretMasterKeyData = genratePaddedPass(newMasterPass)
+						.getBytes();
 				secretMasterKey = new SecretKeySpec(secretMasterKeyData, "AES");
-				s = new GCMParameterSpec(128, secretMasterKeyData);
+				// SecureRandom sr = new SecureRandom();
+				// sr.nextBytes(intialVector);
+				System.out.println(new String(intialVector));
 				try {
 					loadEncryptedData();
 				} catch (Exception e) {
@@ -107,9 +110,10 @@ public class PasswordManager {
 			InvalidKeyException, InvalidAlgorithmParameterException,
 			NoSuchAlgorithmException, NoSuchProviderException,
 			NoSuchPaddingException {
-		Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", "BC");
 
-		cipher.init(Cipher.ENCRYPT_MODE, secretMasterKey, s);
+		Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", "BC");
+		cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(secretMasterKeyData,
+				"AES"), new IvParameterSpec(intialVector));
 
 		ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 		CipherOutputStream cipherOutputStream = new CipherOutputStream(
@@ -142,13 +146,24 @@ public class PasswordManager {
 		}
 	}
 
+	public String genratePaddedPass(String s) {
+		if (s.length() == 16) {
+			return s;
+		} else {
+			int paddedLength = 16 - s.length();
+			for (int i = 0; i < paddedLength; i++) {
+				s += "$";
+			}
+			return s;
+		}
+	}
+
 	public String decrypt(byte[] encryptedPass) {
 		String result = "";
 		try {
 			Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", "BC");
-			// randomIV = createRandomArray(16);
-			GCMParameterSpec s = new GCMParameterSpec(128, secretMasterKeyData);
-			cipher.init(Cipher.DECRYPT_MODE, secretMasterKey, s);
+			cipher.init(Cipher.DECRYPT_MODE, secretMasterKey,
+					new IvParameterSpec(intialVector));
 			byte[] decryptedPlaintext = cipher.doFinal(encryptedPass);
 			result = new String(decryptedPlaintext);
 		} catch (Exception e) {
@@ -206,7 +221,7 @@ public class PasswordManager {
 			os = new FileOutputStream(System.getProperty("user.dir")
 					+ "//settings.dat");
 			ObjectOutputStream out = new ObjectOutputStream(os);
-			Settings set = new Settings(salt, encryptedMaster);
+			Settings set = new Settings(salt, encryptedMaster, intialVector);
 			out.writeObject(set);
 			out.close();
 			os.close();
@@ -224,6 +239,7 @@ public class PasswordManager {
 				ObjectInputStream in = new ObjectInputStream(is);
 				Settings set = (Settings) in.readObject();
 				salt = set.getSalt();
+				intialVector = set.getIntialVector();
 				in.close();
 				is.close();
 				return set.getEncryptedPass();
