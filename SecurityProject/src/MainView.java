@@ -3,6 +3,9 @@ import java.awt.FlowLayout;
 import java.awt.Toolkit;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
+
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
@@ -174,9 +177,18 @@ public class MainView extends JFrame {
 	}
 
 	public void getMasterPassWord() {
-		masterPassWord = JOptionPane.showInputDialog(
-				"Please, Enter The Master Password:", null);
-
+		boolean match = false;
+		try {
+			while (!match) {
+				masterPassWord = JOptionPane.showInputDialog(
+						"Please, Enter The Master Password:", null);
+				if (masterPassWord == null)
+					break;
+				match = manger.loginDone(masterPassWord);
+			}
+		} catch (Exception e) {
+			System.err.println("Error in getMasterPass method");
+		}
 	}
 
 	public static void main(String[] args) {
