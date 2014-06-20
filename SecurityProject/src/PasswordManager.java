@@ -98,6 +98,16 @@ public class PasswordManager {
 		return "";
 	}
 
+	public void removeDomain(String domain) {
+		byte[] tag = mac.doFinal(domain.getBytes());
+		map.remove(Arrays.toString(tag));
+		try {
+			saveEncryptedData();
+		} catch (Exception e) {
+
+		}
+	}
+
 	private void generateRandom() throws NoSuchAlgorithmException {
 		SecureRandom random = SecureRandom.getInstance("SHA1PRNG");
 		// Generate a 8 byte (64 bit) salt

@@ -52,7 +52,7 @@ public class MainView extends JFrame {
 
 		messageDialog = new JDialog();
 
-		addButton = new JButton("Add");
+		addButton = new JButton("Add/Modify");
 		removeButton = new JButton("Remove");
 		LookUpButton = new JButton("LookUp");
 
@@ -91,7 +91,11 @@ public class MainView extends JFrame {
 		removeButton.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mousePressed(MouseEvent e) {
-
+				String name = JOptionPane.showInputDialog(
+						"Enter DomainName to remove:", null);
+				if (name != null) {
+					manger.removeDomain(name);
+				}
 			}
 		});
 		LookUpButton.addMouseListener(new MouseAdapter() {
@@ -102,11 +106,12 @@ public class MainView extends JFrame {
 				if (name != null) {
 					String pass = manger.getPassword(name);
 					if (!pass.equals(""))
-						JOptionPane.showMessageDialog(null, "Password is : "
-								+ pass);
+						JOptionPane.showMessageDialog(reference,
+								"Password is : " + pass);
 					else
 						JOptionPane.showMessageDialog(null,
 								"Domain Named Not Found!" + pass);
+
 				}
 			}
 		});
