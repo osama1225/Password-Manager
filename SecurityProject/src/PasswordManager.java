@@ -1,23 +1,48 @@
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
+import java.security.Security;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 import java.util.Arrays;
 import java.util.HashMap;
 
 import javax.crypto.Cipher;
+import javax.crypto.CipherOutputStream;
 import javax.crypto.Mac;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.omg.CORBA.portable.InputStream;
+
 public class PasswordManager {
+	static {
+		System.out.println("here in static");
+		// add at runtime the Bouncy Castle Provider
+		// the provider is available only for this application
+		Security.addProvider(new BouncyCastleProvider());
+
+		// BC is the ID for the Bouncy Castle provider;
+		if (Security.getProvider("BC") == null) {
+			System.out.println("Bouncy Castle provider is NOT available");
+		} else {
+			System.out.println("Bouncy Castle provider is available");
+		}
+	}
 
 	private Mac mac;
 	private byte[] salt;
@@ -28,6 +53,9 @@ public class PasswordManager {
 	private SecretKey key;
 	private byte[] encryptedMaster;// will be saved locally
 	private HashMap<String, byte[]> map;
+	private byte[] secretMasterKeyData;
+	private SecretKey secretMasterKey;
+	private GCMParameterSpec s;
 
 	public PasswordManager() {
 		try {
@@ -52,11 +80,19 @@ public class PasswordManager {
 			encryptedMaster = encryptMasterPass(newMasterPass);
 			// save encrypted pass.
 			savedEncryptedMasterPass();
+			secretMasterKeyData = newMasterPass.getBytes();
+			System.out.println(newMasterPass);
+			secretMasterKey = new SecretKeySpec(secretMasterKeyData, "AES");
+			s = new GCMParameterSpec(128, secretMasterKeyData);
 			return true;
 		} else {
 			// check if Entered Master is the same as used before.
 			boolean match = authenticate(newMasterPass);
 			if (match) {
+				secretMasterKeyData = newMasterPass.getBytes();
+				System.out.println(newMasterPass);
+				secretMasterKey = new SecretKeySpec(secretMasterKeyData, "AES");
+				s = new GCMParameterSpec(128, secretMasterKeyData);
 				try {
 					loadEncryptedData();
 				} catch (Exception e) {
@@ -67,12 +103,35 @@ public class PasswordManager {
 		}
 	}
 
-	public void encrypt(String DomainName, String password) {
+	private byte[] encryptWithAesGcm(byte[] plaintext) throws IOException,
+			InvalidKeyException, InvalidAlgorithmParameterException,
+			NoSuchAlgorithmException, NoSuchProviderException,
+			NoSuchPaddingException {
+		Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", "BC");
+
+		cipher.init(Cipher.ENCRYPT_MODE, secretMasterKey, s);
+
+		ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+		CipherOutputStream cipherOutputStream = new CipherOutputStream(
+				byteArrayOutputStream, cipher);
+
+		cipherOutputStream.write(plaintext);
+		cipherOutputStream.close();
+
+		return byteArrayOutputStream.toByteArray();
+	}
+
+	public void encrypt(String DomainName, String password)
+			throws InvalidKeyException, InvalidAlgorithmParameterException,
+			NoSuchAlgorithmException, NoSuchProviderException,
+			NoSuchPaddingException, IOException {
 		// here domain will be saved using its tag
 		byte[] tag = mac.doFinal(DomainName.getBytes());
 
+		// encrypt process go here.
+
 		// password will be saved using its encryption by GCM
-		byte[] pass = "123".getBytes();// not yet
+		byte[] pass = encryptWithAesGcm(password.getBytes());
 
 		map.put(Arrays.toString(tag), pass);
 		// save to file
@@ -84,8 +143,19 @@ public class PasswordManager {
 	}
 
 	public String decrypt(byte[] encryptedPass) {
-		String pass = "12";
-		return pass;
+		String result = "";
+		try {
+			Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", "BC");
+			// randomIV = createRandomArray(16);
+			GCMParameterSpec s = new GCMParameterSpec(128, secretMasterKeyData);
+			cipher.init(Cipher.DECRYPT_MODE, secretMasterKey, s);
+			byte[] decryptedPlaintext = cipher.doFinal(encryptedPass);
+			result = new String(decryptedPlaintext);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return result;
 	}
 
 	public String getPassword(String domainName) {
@@ -186,4 +256,5 @@ public class PasswordManager {
 	public HashMap<String, byte[]> getMap() {
 		return map;
 	}
+
 }

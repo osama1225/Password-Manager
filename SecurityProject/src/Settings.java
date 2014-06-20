@@ -17,4 +17,5 @@ public class Settings implements Serializable {
 	public byte[] getSalt() {
 		return salt;
 	}
+
 }
