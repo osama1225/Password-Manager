@@ -1,5 +1,5 @@
 
 public interface updateView {
 
-	public void update(String name,String pass,int row);
+	public void update(String name,String pass);
 }

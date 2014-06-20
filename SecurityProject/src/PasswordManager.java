@@ -1,6 +1,5 @@
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -9,29 +8,36 @@ import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 import java.util.Arrays;
+import java.util.HashMap;
 
 import javax.crypto.Cipher;
+import javax.crypto.Mac;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
-import javax.print.attribute.standard.PDLOverrideSupported;
-import javax.swing.text.MaskFormatter;
+import javax.crypto.spec.SecretKeySpec;
 
 public class PasswordManager {
 
-	private Cipher cipher;
+	private Mac mac;
 	private byte[] salt;
 	private final int iterationCount = 1024;
 	private final int keyLength = 256;
 	private final String PBKDFAlgo = "PBKDF2WithHmacSHA1";
+	private final String MACAlgo = "HmacSHA256";
 	private SecretKey key;
-	private String masterPass;
 	private byte[] encryptedMaster;// will be saved locally
+	private HashMap<String, byte[]> map;
 
 	public PasswordManager() {
 		try {
 			// first check if A master is stored before.
 			encryptedMaster = getSavedEncryptedMaster();
+			// ini
+			mac = Mac.getInstance(MACAlgo);
+			key = new SecretKeySpec("123456789".getBytes()/* for now */, MACAlgo);
+			mac.init(key);
+			map = new HashMap<String, byte[]>();
 		} catch (Exception e) {
 			System.err.println("Error in passManager");
 		}
@@ -49,21 +55,52 @@ public class PasswordManager {
 			return true;
 		} else {
 			// check if Entered Master is the same as used before.
-			return authenticate(newMasterPass);
+			boolean match = authenticate(newMasterPass);
+			if (match) {
+				try {
+					loadEncryptedData();
+				} catch (Exception e) {
+					System.err.println("Error in loading Encrypted Data");
+				}
+			}
+			return match;
 		}
 	}
 
-	public void encrypt(String data) {
+	public void encrypt(String DomainName, String password) {
+		// here domain will be saved using its tag
+		byte[] tag = mac.doFinal(DomainName.getBytes());
 
+		// password will be saved using its encryption by GCM
+		byte[] pass = "123".getBytes();// not yet
+
+		map.put(Arrays.toString(tag), pass);
+		// save to file
+		try {
+			saveEncryptedData();
+		} catch (Exception e) {
+			System.err.println("Error in saving data");
+		}
 	}
 
-	public void decrypt(String encryptedData) {
+	public String decrypt(byte[] encryptedPass) {
+		String pass = "12";
+		return pass;
+	}
 
+	public String getPassword(String domainName) {
+		// get the tag of the input domain name
+		byte[] tag = mac.doFinal(domainName.getBytes());
+		byte[] ePass = map.get(Arrays.toString(tag));
+		if (ePass != null)
+			return decrypt(ePass);
+
+		return "";
 	}
 
 	private void generateRandom() throws NoSuchAlgorithmException {
 		SecureRandom random = SecureRandom.getInstance("SHA1PRNG");
-		// Generate a 8 byte (64 bit) salt as recommended by RSA PKCS5
+		// Generate a 8 byte (64 bit) salt
 		salt = new byte[8];
 		random.nextBytes(salt);
 
@@ -115,5 +152,28 @@ public class PasswordManager {
 			}
 		}
 		return null;
+	}
+
+	private void saveEncryptedData() throws Exception {
+		FileOutputStream os = new FileOutputStream(
+				System.getProperty("user.dir") + "//data.dat");
+		ObjectOutputStream out = new ObjectOutputStream(os);
+		out.writeObject(new SavedEntry(map));
+		out.close();
+		os.close();
+	}
+
+	private void loadEncryptedData() throws Exception {
+		FileInputStream is = new FileInputStream(System.getProperty("user.dir")
+				+ "//data.dat");
+		ObjectInputStream in = new ObjectInputStream(is);
+
+		map = ((SavedEntry) in.readObject()).getMap();
+		in.close();
+		is.close();
+	}
+
+	public HashMap<String, byte[]> getMap() {
+		return map;
 	}
 }

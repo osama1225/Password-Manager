@@ -27,9 +27,7 @@ public class AddDomain extends JDialog {
 
 	private updateView uV;
 
-	private int row;
-
-	public AddDomain(String name, String pas, int row) {
+	public AddDomain(String name, String pas) {
 		setLayout(new BorderLayout());
 		setSize(200, 200);
 
@@ -63,7 +61,6 @@ public class AddDomain extends JDialog {
 
 		add(centerPanel, "Center");
 		add(southPanel, "South");
-		this.row = row;
 	}
 
 	public void setuV(updateView uV) {
@@ -82,7 +79,7 @@ public class AddDomain extends JDialog {
 							"Please fill all Fields");
 				else {
 					// do some stuff with the new entry
-					notifyListener(domainName, pass, row);
+					notifyListener(domainName, pass);
 				}
 				close();
 			}
@@ -95,9 +92,9 @@ public class AddDomain extends JDialog {
 		});
 	}
 
-	private void notifyListener(String name, String pass, int row) {
+	private void notifyListener(String name, String pass) {
 		if (uV != null)
-			uV.update(name, pass, row);
+			uV.update(name, pass);
 	}
 
 	private void close() {
