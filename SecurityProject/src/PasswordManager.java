@@ -135,6 +135,7 @@ public class PasswordManager {
 		// encrypt process go here.
 
 		// password will be saved using its encryption by GCM
+		password = genratePaddedPass(password);
 		byte[] pass = encryptWithAesGcm(password.getBytes());
 
 		map.put(Arrays.toString(tag), pass);
@@ -166,6 +167,7 @@ public class PasswordManager {
 					new IvParameterSpec(intialVector));
 			byte[] decryptedPlaintext = cipher.doFinal(encryptedPass);
 			result = new String(decryptedPlaintext);
+			result = result.replace("$", "");
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
