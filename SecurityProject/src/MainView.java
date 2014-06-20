@@ -6,6 +6,7 @@ import java.awt.event.MouseEvent;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -32,6 +33,7 @@ public class MainView extends JFrame {
 	private AddDomain newDomain;
 
 	private DefaultTableModel dModel;
+	private String masterPassWord;
 
 	public MainView() {
 		setSize(500, 500);
@@ -88,18 +90,24 @@ public class MainView extends JFrame {
 		add(bodyPanel, "Center");
 		add(buttonsPanel, "South");
 
-
 		// set listeners
 		setListeners();
 
 		name = "";
 		pass = "";
+		setVisible(true);
+		getMasterPassWord();
 	}
 
 	private void setListeners() {
 		addButton.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mousePressed(MouseEvent e) {
+				if (masterPassWord == null || masterPassWord.equals("")) {
+					getMasterPassWord();
+					if (masterPassWord == null || masterPassWord.equals(""))
+						return;
+				}
 
 				add();
 			}
@@ -107,7 +115,9 @@ public class MainView extends JFrame {
 		removeButton.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mousePressed(MouseEvent e) {
-				table.remove(table.getSelectedRow());
+				int row = table.getSelectedRow();
+				if (row >= 0)
+					table.remove(table.getSelectedRow());
 			}
 		});
 		ChangeMasterPass.addMouseListener(new MouseAdapter() {
@@ -163,9 +173,14 @@ public class MainView extends JFrame {
 		pass = "";
 	}
 
+	public void getMasterPassWord() {
+		masterPassWord = JOptionPane.showInputDialog(
+				"Please, Enter The Master Password:", null);
+
+	}
+
 	public static void main(String[] args) {
 		MainView v = new MainView();
-		v.setVisible(true);
 	}
 
 }

@@ -29,7 +29,7 @@ public class AddDomain extends JDialog {
 
 	private int row;
 
-	public AddDomain(String name,String pas,int row) {
+	public AddDomain(String name, String pas, int row) {
 		setLayout(new BorderLayout());
 		setSize(200, 200);
 
@@ -42,6 +42,8 @@ public class AddDomain extends JDialog {
 
 		domainT.setText(name);
 		passT.setText(pas);
+		if (!name.equals(""))
+			domainT.setEnabled(false);
 
 		centerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 20));
 		centerPanel.setBounds(0, 0, 200, 200);
@@ -61,10 +63,8 @@ public class AddDomain extends JDialog {
 
 		add(centerPanel, "Center");
 		add(southPanel, "South");
-		this.row=row;
+		this.row = row;
 	}
-
-	
 
 	public void setuV(updateView uV) {
 		this.uV = uV;
@@ -100,8 +100,6 @@ public class AddDomain extends JDialog {
 			uV.update(name, pass, row);
 	}
 
-
-
 	private void close() {
 		centerPanel.removeAll();
 		southPanel.removeAll();
@@ -110,18 +108,4 @@ public class AddDomain extends JDialog {
 		MainView.messageDialog.dispose();
 	}
 
-	public static void main(String[] args) {
-		// JFrame f = new JFrame();
-		// f.setSize(200, 200);
-		// f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		// f.add(new AddDomain());
-		// f.setVisible(true);
-		// JDialog addEntryDialog = new JDialog();
-		// AddDomain a1=new AddDomain();
-		// addEntryDialog.setSize(a1.getSize());
-		// addEntryDialog.setContentPane(a1.getContentPane());
-		// addEntryDialog.setLocationRelativeTo(null);
-		// addEntryDialog.setVisible(true);
-
-	}
 }
